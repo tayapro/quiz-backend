@@ -1,0 +1,15 @@
+{
+    "name": "quiz-backend",
+    "version": "0.0.1-alpha",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "dev": "node index.js"
+    },
+    "author": "Taya Simakova",
+    "license": "MIT",
+    "description": "",
+    "dependencies": {
+        "express": "^4.19.2"
+    }
+}
