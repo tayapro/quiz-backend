@@ -1,0 +1,188 @@
+plugins:
+  - serverless-iam-roles-per-function
+
+service: shortify
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  region: eu-west-1
+  profile: identeco
+  runtime: provided.al2
+  architecture: arm64
+  environment:
+    SHORTIFY_DEPLOYMENT_STAGE: ${sls:stage}
+    SHORTIFY_TABLE_NAME: ${self:service}-${sls:stage}-aliases
+    SHORTIFY_USER_POOL_NAME: ${self:service}-${sls:stage}-v3-auth-pool
+    SHORTIFY_USER_POOL_CLIENT_NAME: ${self:service}-${sls:stage}-v3-auth-pool-ui
+    SHORTIFY_ALIAS_LENGTH: 5
+    SHORTIFY_CORS_ORIGINS: 'https://localhost:5173'
+    SHORTIFY_BANNED_DOMAINS: ${self:provider.environment.SHORTIFY_CORS_ORIGINS}
+
+package:
+  individually: true
+  patterns:
+    - '!./**'
+
+custom:
+  urlsTableArn: !GetAtt [UrlsTable, Arn]
+  cognitoArn: !GetAtt [UserPool, Arn]
+
+functions:
+  create:
+    handler: create/bootstrap
+    events:
+      - http:
+          method: post
+          path: /api/create
+          cors:
+            origin: ${self:provider.environment.SHORTIFY_CORS_ORIGINS}
+            allowCredentials: true
+          authorizer:
+            name: PrivateAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoArn}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: ${self:custom.urlsTableArn}
+    package:
+      artifact: ../../bin/create.zip
+
+  update:
+    handler: bootstrap
+    events:
+      - http:
+          method: post
+          path: /api/update
+          cors:
+            origin: ${self:provider.environment.SHORTIFY_CORS_ORIGINS}
+            allowCredentials: true
+          authorizer:
+            name: PrivateAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoArn}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+        Resource: ${self:custom.urlsTableArn}
+    package:
+      artifact: ../../bin/update.zip
+
+  delete:
+    handler: bootstrap
+    events:
+      - http:
+          method: delete
+          path: /api/{alias}
+          cors:
+            origin: ${self:provider.environment.SHORTIFY_CORS_ORIGINS}
+            allowCredentials: true
+          authorizer:
+            name: PrivateAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoArn}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+        Resource: ${self:custom.urlsTableArn}
+    package:
+      artifact: ../../bin/delete.zip
+
+  list:
+    handler: bootstrap
+    events:
+      - http:
+          method: get
+          path: /api/list
+          cors:
+            origin: ${self:provider.environment.SHORTIFY_CORS_ORIGINS}
+            allowCredentials: true
+          authorizer:
+            name: PrivateAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoArn}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Scan
+        Resource: ${self:custom.urlsTableArn}
+    package:
+      artifact: ../../bin/list.zip
+
+  redirect:
+    handler: bootstrap
+    events:
+      - http:
+          method: get
+          path: /redirect/{alias}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+        Resource: ${self:custom.urlsTableArn}
+    package:
+      artifact: ../../bin/redirect.zip
+
+  ping:
+    handler: bootstrap
+    events:
+      - http:
+          method: get
+          path: /api/ping
+          cors:
+            origin: ${self:provider.environment.SHORTIFY_CORS_ORIGINS}
+            allowCredentials: true
+          #authorizer:
+          #  name: PrivateAuthorizer
+          #  type: COGNITO_USER_POOLS
+          #  arn: ${self:custom.cognitoArn}
+    package:
+      artifact: ../../bin/ping.zip
+
+resources:
+  Resources:
+    UrlsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.SHORTIFY_TABLE_NAME}
+        AttributeDefinitions:
+          - AttributeName: alias
+            AttributeType: S
+        KeySchema:
+          - AttributeName: alias
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+    UserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: ${self:provider.environment.SHORTIFY_USER_POOL_NAME}
+        Schema:
+          - Name: email
+            Required: true
+            Mutable: true
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 6
+        AutoVerifiedAttributes: ['email']
+
+    UserClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: ${self:provider.environment.SHORTIFY_USER_POOL_CLIENT_NAME}
+        GenerateSecret: false
+        UserPoolId: { Ref: UserPool }
+        AccessTokenValidity: 1
+        IdTokenValidity: 1
+        ExplicitAuthFlows:
+          - ALLOW_CUSTOM_AUTH
+          - ALLOW_REFRESH_TOKEN_AUTH
+          - ALLOW_USER_PASSWORD_AUTH
+          - ALLOW_USER_SRP_AUTH

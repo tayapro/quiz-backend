@@ -1,0 +1,44 @@
+plugins:
+  - serverless-iam-roles-per-function
+
+service: quiz-backend
+
+frameworkVersion: '3'
+
+package:
+  individually: false
+  patterns:
+    - '!./**'
+    - ./src/**
+    - ./node_modules/**
+    - ./package*.json
+
+provider:
+  name: aws
+  region: eu-west-1
+  runtime: nodejs20.x
+  environment:
+    PPP_HELLO: ${self:service}-${sls:stage}-hello
+    QUIZ_CORS_ORIGINS: 'https://localhost:5173'
+
+functions:
+  ping:
+    handler: src/handlers/ping.handler
+    events:
+      - http:
+          method: get
+          path: ping
+
+  hello:
+    handler: src/handlers/hello.handler
+    events:
+      - http:
+          method: get
+          path: hello
+          cors:
+            origin: ${self:provider.environment.QUIZ_CORS_ORIGINS}
+            allowCredentials: true
+          authorizer:
+            name: PrivateAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: arn:aws:cognito-idp:eu-west-1:722810514283:userpool/eu-west-1_dNwwtOBCR
