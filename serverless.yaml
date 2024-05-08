@@ -29,6 +29,16 @@ functions:
           method: get
           path: ping
 
+  quizQuestion:
+    handler: src/handlers/quizQuestion.handler
+    events:
+      - http:
+          method: get
+          path: /api/quiz_question
+          cors:
+            origin: ${self:provider.environment.QUIZ_CORS_ORIGINS}
+            allowCredentials: true
+
   hello:
     handler: src/handlers/hello.handler
     events:
@@ -41,4 +51,4 @@ functions:
           authorizer:
             name: PrivateAuthorizer
             type: COGNITO_USER_POOLS
-            arn: arn:aws:cognito-idp:eu-west-1:722810514283:userpool/eu-west-1_dNwwtOBCR
+            arn: arn:aws:cognito-idp:eu-west-1:722810514283:userpool/eu-west-1_qIoHIKJ2y

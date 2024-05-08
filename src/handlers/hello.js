@@ -4,6 +4,10 @@ async function handler(event, context) {
     try {
         const email = event.requestContext.authorizer.claims.email
         const nickname = event.requestContext.authorizer.claims.nickname
+        const name = event.requestContext.authorizer.claims.name
+
+        console.log(event.requestContext.authorizer.claims)
+
         return {
             statusCode: 200,
             headers: {
@@ -12,6 +16,7 @@ async function handler(event, context) {
             },
             body: JSON.stringify({
                 nickname,
+                name,
                 email,
                 location: 'Ireland',
                 date: `${new Date().toISOString()}`,
