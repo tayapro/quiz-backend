@@ -29,12 +29,22 @@ functions:
           method: get
           path: ping
 
-  quizQuestion:
-    handler: src/handlers/quizQuestion.handler
+  quiz_question:
+    handler: src/handlers/quiz_question.handler
     events:
       - http:
           method: get
           path: /api/quiz_question
+          cors:
+            origin: ${self:provider.environment.QUIZ_CORS_ORIGINS}
+            allowCredentials: true
+
+  quiz_answer:
+    handler: src/handlers/quiz_answer.handler
+    events:
+      - http:
+          method: post
+          path: /api/quiz_answer
           cors:
             origin: ${self:provider.environment.QUIZ_CORS_ORIGINS}
             allowCredentials: true

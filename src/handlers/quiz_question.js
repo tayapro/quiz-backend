@@ -28,6 +28,9 @@ async function handler() {
         console.error(err)
         return {
             statusCode: 400,
+            headers: {
+                ...cors,
+            },
         }
     }
 }

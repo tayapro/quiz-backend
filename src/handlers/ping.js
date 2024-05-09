@@ -1,8 +1,14 @@
+let a = 10
+
 async function handler(event) {
     try {
+        a++
         return {
             statusCode: 200,
-            body: 'OK',
+            body: JSON.stringify({
+                message: 'OK',
+                a,
+            }),
         }
     } catch (err) {
         console.error(err)
